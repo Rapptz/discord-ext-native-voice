@@ -1,0 +1,12 @@
+/target
+Cargo.lock
+.venv/
+__pycache__/
+*.egg-info/
+*.pcm
+*.log
+*.pyd
+
+# Ignore top level py files except setup.py
+/*.py
+!/setup.py
