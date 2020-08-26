@@ -1,5 +1,4 @@
 use serde::{Serialize, Deserialize};
-use serde_repr::{Serialize_repr, Deserialize_repr};
 use serde_json::value::RawValue;
 
 use std::{str::FromStr, time::{SystemTime, UNIX_EPOCH, Instant}};
@@ -8,21 +7,21 @@ use crate::error::{custom_error, ProtocolError};
 // Static typed models to convert to
 // A lot of boilerplate lol
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize_repr, Deserialize_repr)]
-#[repr(u8)]
-pub enum Opcode {
-    Identify = 0,
-    SelectProtocol = 1,
-    Ready = 2,
-    Heartbeat = 3,
-    SessionDescription = 4,
-    Speaking = 5,
-    HeartbeatAck = 6,
-    Resume = 7,
-    Hello = 8,
-    Resumed = 9,
-    ClientConnect = 12,
-    ClientDisconnect = 13,
+pub struct Opcode;
+
+impl Opcode {
+    pub const IDENTIFY: u8 = 0;
+    pub const SELECT_PROTOCOL: u8 = 1;
+    pub const READY: u8 = 2;
+    pub const HEARTBEAT: u8 = 3;
+    pub const SESSION_DESCRIPTION: u8 = 4;
+    pub const SPEAKING: u8 = 5;
+    pub const HEARTBEAT_ACK: u8 = 6;
+    pub const RESUME: u8 = 7;
+    pub const HELLO: u8 = 8;
+    pub const RESUMED: u8 = 9;
+    pub const CLIENT_CONNECT: u8 = 12;
+    pub const CLIENT_DISCONNECT: u8 = 13;
 }
 
 // These are sent
@@ -36,14 +35,14 @@ pub struct ResumeInfo {
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct Resume {
-    pub op: Opcode,
+    pub op: u8,
     pub d: ResumeInfo,
 }
 
 impl Resume {
     pub fn new(info: ResumeInfo) -> Self {
         Self {
-            op: Opcode::Resume,
+            op: Opcode::RESUME,
             d: info
         }
     }
@@ -59,14 +58,14 @@ pub struct IdentifyInfo {
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct Identify {
-    pub op: Opcode,
+    pub op: u8,
     pub d: IdentifyInfo,
 }
 
 impl Identify {
     pub(crate) fn new(info: IdentifyInfo) -> Self {
         Self {
-            op: Opcode::Identify,
+            op: Opcode::IDENTIFY,
             d: info,
         }
     }
@@ -87,14 +86,14 @@ pub struct SelectProtocolWrapper {
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct SelectProtocol {
-    pub op: Opcode,
+    pub op: u8,
     pub d: SelectProtocolWrapper,
 }
 
 impl SelectProtocol {
     pub fn new(info: SelectProtocolInfo) -> Self {
         Self {
-            op: Opcode::SelectProtocol,
+            op: Opcode::SELECT_PROTOCOL,
             d: SelectProtocolWrapper {
                 protocol: "udp".to_string(),
                 data: info,
@@ -104,7 +103,7 @@ impl SelectProtocol {
 
     pub fn from_addr(address: String, port: u16, mode: EncryptionMode) -> Self {
         Self {
-            op: Opcode::SelectProtocol,
+            op: Opcode::SELECT_PROTOCOL,
             d: SelectProtocolWrapper {
                 protocol: "udp".to_string(),
                 data: SelectProtocolInfo {
@@ -119,14 +118,14 @@ impl SelectProtocol {
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct Heartbeat {
-    op: Opcode,
+    op: u8,
     d: u64,
 }
 
 impl Heartbeat {
     pub fn new(instant: Instant) -> Self {
         Self {
-            op: Opcode::Heartbeat,
+            op: Opcode::HEARTBEAT,
             d: instant.elapsed().as_millis() as u64,
         }
     }
@@ -134,7 +133,7 @@ impl Heartbeat {
     pub fn now() -> Self {
         let now = SystemTime::now().duration_since(UNIX_EPOCH).expect("time went backwards");
         Self {
-            op: Opcode::Heartbeat,
+            op: Opcode::HEARTBEAT,
             d: now.as_millis() as u64,
         }
     }
@@ -202,14 +201,14 @@ pub struct SpeakingInfo {
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct Speaking {
-    op: Opcode,
+    op: u8,
     d: SpeakingInfo,
 }
 
 impl Speaking {
     pub fn new(flags: SpeakingFlags) -> Self {
         Self {
-            op: Opcode::Speaking,
+            op: Opcode::SPEAKING,
             d: SpeakingInfo {
                 delay: 0,
                 speaking: flags.value,
@@ -222,7 +221,7 @@ impl Speaking {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RawReceivedPayload<'a> {
-    pub op: Opcode,
+    pub op: u8,
     #[serde(borrow)]
     pub d: &'a RawValue,
 }

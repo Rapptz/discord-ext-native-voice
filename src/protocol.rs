@@ -174,7 +174,7 @@ impl DiscordVoiceProtocol {
                 let payload: RawReceivedPayload = serde_json::from_str(string.as_str())?;
                 println!("Received payload: {:?}", &payload);
                 match payload.op {
-                    Opcode::Hello => {
+                    Opcode::HELLO => {
                         let payload: Hello = serde_json::from_str(payload.d.get())?;
                         let interval = payload.heartbeat_interval as u64;
                         self.heartbeat_interval = interval.min(5000);
@@ -183,14 +183,14 @@ impl DiscordVoiceProtocol {
                         socket.set_read_timeout(Some(std::time::Duration::from_millis(5000)))?;
                         self.last_heartbeat = Instant::now();
                     },
-                    Opcode::Ready => {
+                    Opcode::READY => {
                         let payload: Ready = serde_json::from_str(payload.d.get())?;
                         self.handle_ready(payload)?;
                     },
-                    Opcode::Heartbeat => {
+                    Opcode::HEARTBEAT => {
                         self.heartbeat()?;
                     },
-                    Opcode::HeartbeatAck => {
+                    Opcode::HEARTBEAT_ACK => {
                         let now = Instant::now();
                         let delta = now.duration_since(self.last_heartbeat);
                         if self.recent_acks.len() == 20 {
@@ -198,7 +198,7 @@ impl DiscordVoiceProtocol {
                         }
                         self.recent_acks.push_back(delta.as_secs_f64());
                     }
-                    Opcode::SessionDescription => {
+                    Opcode::SESSION_DESCRIPTION => {
                         let payload: SessionDescription = serde_json::from_str(payload.d.get())?;
                         self.encryption = EncryptionMode::from_str(payload.mode.as_str())?;
                         self.secret_key = payload.secret_key;
