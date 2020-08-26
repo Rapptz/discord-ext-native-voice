@@ -154,3 +154,8 @@ class VoiceClient(discord.VoiceProtocol):
         if self._connection:
             return self._connection.is_playing()
         return False
+
+    def _debug_info(self):
+        if self._connection:
+            return self._connection.get_state()
+        return {}

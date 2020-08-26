@@ -268,7 +268,7 @@ impl Default for EncryptionMode {
     }
 }
 
-impl std::convert::Into<String> for EncryptionMode {
+impl Into<String> for EncryptionMode {
     fn into(self) -> String {
         match self {
             EncryptionMode::XSalsa20Poly1305 => "xsalsa20_poly1305".to_owned(),

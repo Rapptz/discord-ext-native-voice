@@ -1,5 +1,5 @@
 use pyo3::prelude::*;
-use pyo3::types::PyBytes;
+use pyo3::types::{PyDict, PyBytes};
 use pyo3::create_exception;
 
 use std::thread;
@@ -72,6 +72,7 @@ impl VoiceConnection {
         thread::spawn(move || {
             loop {
                 let result = {
+                    // TODO: consider not using locks?
                     let mut guard = proto.lock();
                     guard.poll()
                 };
@@ -151,6 +152,21 @@ impl VoiceConnection {
         let mut proto = self.protocol.lock();
         proto.speaking(payloads::SpeakingFlags::microphone())?;
         Ok(())
+    }
+
+    fn get_state<'py>(&self, py: Python<'py>) -> PyResult<&'py PyDict> {
+        let result = PyDict::new(py);
+        let proto = self.protocol.lock();
+        result.set_item("secret_key", Vec::<u8>::from(proto.secret_key))?;
+        result.set_item("encryption_mode", Into::<String>::into(proto.encryption))?;
+        result.set_item("endpoint", proto.endpoint.clone())?;
+        result.set_item("endpoint_ip", proto.endpoint_ip.clone())?;
+        result.set_item("port", proto.port)?;
+        result.set_item("token", proto.token.clone())?;
+        result.set_item("ssrc", proto.ssrc)?;
+        result.set_item("last_heartbeat", proto.last_heartbeat.elapsed().as_secs_f32())?;
+        result.set_item("player_connected", self.player.is_some())?;
+        Ok(result)
     }
 }
 
