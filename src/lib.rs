@@ -15,6 +15,7 @@ pub(crate) mod state;
 
 create_exception!(_native_voice, ReconnectError, pyo3::exceptions::Exception);
 create_exception!(_native_voice, ConnectionError, pyo3::exceptions::Exception);
+create_exception!(_native_voice, ConnectionClosed, pyo3::exceptions::Exception);
 
 fn code_can_be_handled(code: u16) -> bool {
     // Non-resumable close-codes are:
@@ -29,6 +30,9 @@ impl std::convert::From<error::ProtocolError> for PyErr {
         match err {
             error::ProtocolError::Closed(code) if code_can_be_handled(code) => {
                 ReconnectError::py_err(code)
+            },
+            error::ProtocolError::Closed(code) => {
+                ConnectionClosed::py_err(code)
             }
             _ => {
                 ConnectionError::py_err(err.to_string())
@@ -346,5 +350,6 @@ fn _native_voice(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Debugger>()?;
     m.add("ReconnectError", py.get_type::<ReconnectError>())?;
     m.add("ConnectionError", py.get_type::<ConnectionError>())?;
+    m.add("ConnectionClosed", py.get_type::<ConnectionClosed>())?;
     Ok(())
 }

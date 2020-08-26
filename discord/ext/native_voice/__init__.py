@@ -27,6 +27,9 @@ class VoiceClient(discord.VoiceProtocol):
 
         if self._connection is not None:
             channel_id = data['channel_id']
+            if channel_id is None:
+                return await self.disconnect()
+
             self.channel = channel_id and self.guild.get_channel(int(chananel_id))
         else:
             self._voice_state_complete.set()
@@ -99,7 +102,15 @@ class VoiceClient(discord.VoiceProtocol):
         while True:
             try:
                 await self._connection.run(loop)
-            except (_native_voice.ReconnectError, _native_voice.ConnectionError) as e:
+            except _native_voice.ConnectionClosed as e:
+                log.info('Voice connection got a clean close %s', e)
+                await self.disconnect()
+                return
+            except _native_voice.ConnectionError as e:
+                log.exception('Internal voice error: %s', e)
+                await self.disconnect()
+                return
+            except (_native_voice.ReconnectError) as e:
                 if not reconnect:
                     await self.disconnect()
                     raise
