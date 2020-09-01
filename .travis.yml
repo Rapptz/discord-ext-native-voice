@@ -1,0 +1,63 @@
+language: rust
+cache: cargo
+os: linux
+dist: bionic
+
+jobs:
+  include:
+    - name: "Linux x86_64 and i686"
+      services: docker
+      env:
+        - CIBW_BUILD="*-manylinux_x86_64 *-manylinux_i686"
+    - name: "Linux ARMv8"
+      services: docker
+      arch: arm64
+      env:
+        - CIBW_BUILD="*-manylinux_aarch64"
+    - name: "macOS"
+      os: osx
+      osx_image: xcode11
+    - name: "Windows"
+      os: windows
+      language: shell
+      before_install:
+        - choco install python --version 3.8.0
+        - export PATH="/c/Python38:/c/Python38/Scripts:$PATH"
+        - ln -s /c/Python38/python.exe /c/Python38/python3.exe
+
+env:
+  global:
+    - CIBW_BEFORE_ALL_LINUX="curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain stable -y"
+    - CIBW_BUILD_VERBOSITY="1"
+    - CIBW_ENVIRONMENT='PATH="$PATH:$HOME/.cargo/bin" CARGO_TARGET_DIR="$TRAVIS_BUILD_DIR/target"'
+    - CIBW_SKIP="cp27-* cp34-*"
+    - TWINE_USERNAME="__token__"
+
+before_install:
+    - |
+      if [ "$TRAVIS_OS_NAME" = "linux" ]; then
+          sudo apt-get -y install python3-pip
+      fi
+
+install:
+    - |
+      python3 -m pip install --upgrade pip wheel setuptools setuptools-rust==0.11.3
+      python3 -m pip install --upgrade pip cibuildwheel
+
+script:
+    - |
+      if [ "$TRAVIS_OS_NAME" = "windows" ]; then
+          rustup target add i686-pc-windows-msvc
+          rustup target add x86_64-pc-windows-msvc
+          python3 -m cibuildwheel --output-dir wheelhouse
+      fi
+      python3 -m cibuildwheel --output-dir wheelhouse
+
+after_success:
+  - |
+    ls wheelhouse/*.whl
+    if [[ $TRAVIS_TAG ]]; then
+      python3 -m pip install twine
+      python3 setup.py sdist
+      pthon3 -m twine upload wheelhouse/*.whl dist/*
+    fi
