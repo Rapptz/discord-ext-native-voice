@@ -20,15 +20,10 @@ install:
 
 build_script:
   - C:\Python36\python.exe -m cibuildwheel --output-dir wheelhouse
-  - >
-    IF "%APPVEYOR_REPO_TAG%" == "true"
-    (
-      C:\Python36\python.exe -m pip install twine
-      &&
-      @C:\Python36\python.exe -m twine upload "wheelhouse/*.whl"
-    )
+
+deploy_script:
+  - powershell scripts\\deploy_windows.ps1
 
 artifacts:
   - path: "wheelhouse\\*.whl"
     name: Wheels
-
