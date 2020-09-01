@@ -6,7 +6,7 @@ environment:
       CIBW_BEFORE_BUILD: C:\Python36\python.exe -m pip install setuptools setuptools-rust==0.11.3
 
     - RUST_TARGET: i686-pc-windows-msvc
-      CIBW_SKIP: "*win_amd64* cp33-* cp34-* pp*"
+      CIBW_SKIP: "*win_amd64* cp27-* cp33-* cp34-* pp*"
       CIBW_BEFORE_BUILD: C:\Python36\python.exe -m pip install setuptools setuptools-rust==0.11.3
 
 install:
@@ -19,7 +19,7 @@ install:
   - C:\Python36\python.exe -m pip install wheel cibuildwheel setuptools setuptools-rust==0.11.3
 
 build_script:
-  - cibuildwheel --output-dir wheelhouse
+  - C:\Python36\python.exe -m cibuildwheel --output-dir wheelhouse
   - >
     IF %APPVEYOR_REPO_TAG% == "true"
     (
