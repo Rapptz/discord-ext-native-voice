@@ -1,0 +1,34 @@
+environment:
+  TWINE_USERNAME: __token__
+  matrix:
+    - RUST_TARGET: x86_64-pc-windows-msvc
+      CIBW_SKIP: "*win32* cp27-* cp33-* cp34-* pp*"
+      CIBW_BEFORE_BUILD: C:\Python36\python.exe -m pip install setuptools setuptools-rust==0.11.3
+
+    - RUST_TARGET: i686-pc-windows-msvc
+      CIBW_SKIP: "*win_amd64* cp33-* cp34-* pp*"
+      CIBW_BEFORE_BUILD: C:\Python36\python.exe -m pip install setuptools setuptools-rust==0.11.3
+
+install:
+  - appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
+  - rustup-init -yv --default-toolchain stable --default-host %RUST_TARGET%
+  - set PATH=%PATH%;%USERPROFILE%\.cargo\bin
+  - rustc -vV
+  - cargo -vV
+  - C:\Python36\python.exe -m pip install -U pip
+  - C:\Python36\python.exe -m pip install wheel cibuildwheel setuptools setuptools-rust==0.11.3
+
+build_script:
+  - cibuildwheel --output-dir wheelhouse
+  - >
+    IF %APPVEYOR_REPO_TAG% == "true"
+    (
+      C:\Python36\python.exe -m pip install twine
+      &&
+      @C:\Python36\python.exe -m twine upload "wheelhouse/*.whl"
+    )
+
+artifacts:
+  - path: "wheelhouse\\*.whl"
+    name: Wheels
+
