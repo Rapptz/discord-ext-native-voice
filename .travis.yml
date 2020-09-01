@@ -17,20 +17,12 @@ jobs:
     - name: "macOS"
       os: osx
       osx_image: xcode11
-    - name: "Windows"
-      os: windows
-      language: shell
-      before_install:
-        - choco install python --version 3.8.0
-        - export PATH="/c/Python38:/c/Python38/Scripts:$PATH"
-        - ln -s /c/Python38/python.exe /c/Python38/python3.exe
 
 env:
   global:
-    - CIBW_BEFORE_ALL_LINUX="curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain stable -y"
-    - CIBW_BUILD_VERBOSITY="1"
+    - CIBW_BEFORE_ALL_LINUX="source ./scripts/before_install.sh"
     - CIBW_ENVIRONMENT='PATH="$PATH:$HOME/.cargo/bin" CARGO_TARGET_DIR="$TRAVIS_BUILD_DIR/target"'
-    - CIBW_SKIP="cp27-* cp34-*"
+    - CIBW_SKIP="cp27-* cp34-* pp*"
     - TWINE_USERNAME="__token__"
 
 before_install:
@@ -46,11 +38,6 @@ install:
 
 script:
     - |
-      if [ "$TRAVIS_OS_NAME" = "windows" ]; then
-          rustup target add i686-pc-windows-msvc
-          rustup target add x86_64-pc-windows-msvc
-          python3 -m cibuildwheel --output-dir wheelhouse
-      fi
       python3 -m cibuildwheel --output-dir wheelhouse
 
 after_success:
