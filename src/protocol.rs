@@ -48,7 +48,7 @@ pub struct ProtocolBuilder {
 impl ProtocolBuilder {
     pub fn new(endpoint: String) -> Self {
         Self {
-            endpoint: endpoint,
+            endpoint,
             user_id: String::new(),
             server_id: String::new(),
             session_id: String::new(),
@@ -99,7 +99,7 @@ impl ProtocolBuilder {
             token: self.token,
             recent_acks: std::collections::VecDeque::with_capacity(20),
             close_code: 0,
-            ws: ws,
+            ws,
             socket: None,
             heartbeat_interval: std::u64::MAX,
             port: 0,

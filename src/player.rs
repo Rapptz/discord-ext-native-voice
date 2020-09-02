@@ -73,7 +73,7 @@ impl FFmpegPCMAudio {
             ])
             .stdout(Stdio::piped())
             .spawn()?;
-        Ok(Self { process: process })
+        Ok(Self { process })
     }
 }
 
