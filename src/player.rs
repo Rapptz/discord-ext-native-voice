@@ -413,6 +413,7 @@ impl AudioPlayer {
             let guard = protocol.lock();
             guard.clone_state()
         };
+        state.connected();
 
         Self {
             protocol: Arc::clone(&protocol),
