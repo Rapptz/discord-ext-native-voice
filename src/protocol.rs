@@ -171,7 +171,11 @@ impl DiscordVoiceProtocol {
         match msg {
             Message::Text(string) => {
                 let payload: RawReceivedPayload = serde_json::from_str(string.as_str())?;
-                println!("Received payload: {:?}", &payload);
+
+                if payload.op != Opcode::HEARTBEAT_ACK {
+                    println!("Received payload: {:?}", &payload);
+                }
+
                 match payload.op {
                     Opcode::HELLO => {
                         let payload: Hello = serde_json::from_str(payload.d.get())?;
