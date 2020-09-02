@@ -225,7 +225,7 @@ fn encrypt_xsalsa20_poly1305_lite(
     nonce[0..4].copy_from_slice(&lite.to_be_bytes());
 
     cipher.encrypt_in_place(GenericArray::from_slice(&nonce), b"", data)?;
-    data.extend_from_slice(&nonce)?;
+    data.extend_from_slice(&nonce[0..4])?;
     Ok(())
 }
 
