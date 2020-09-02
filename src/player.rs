@@ -298,7 +298,7 @@ impl AudioEncoder {
         self.sequence = self.sequence.wrapping_add(1);
         let size = self.prepare_packet(size)?;
         // println!("Sending buffer: {:?}", &self.buffer[0..size]);
-        match socket.send_to(&self.buffer[0..size], addr) {
+        match socket.send_to(&self.buffer[0..BUFFER_OFFSET+size], addr) {
             Err(ref e) if e.kind() == ErrorKind::WouldBlock || e.kind() == ErrorKind::TimedOut => {
                 println!(
                     "A packet has been dropped (seq: {}, timestamp: {})",
