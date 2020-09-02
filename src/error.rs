@@ -1,4 +1,4 @@
-use std::net::{TcpStream, AddrParseError};
+use std::net::{AddrParseError, TcpStream};
 
 #[derive(Debug)]
 pub enum ProtocolError {
@@ -23,7 +23,9 @@ impl std::fmt::Display for ProtocolError {
             ProtocolError::Opus(ref e) => e.fmt(f),
             ProtocolError::Nacl(ref e) => e.fmt(f),
             ProtocolError::Io(ref e) => e.fmt(f),
-            ProtocolError::Closed(code) => write!(f, "WebSocket connection closed (code: {})", code),
+            ProtocolError::Closed(code) => {
+                write!(f, "WebSocket connection closed (code: {})", code)
+            }
         }
     }
 }

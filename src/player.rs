@@ -1,22 +1,22 @@
+use crate::error::ProtocolError;
+use crate::payloads::{EncryptionMode, SpeakingFlags};
 use crate::protocol::DiscordVoiceProtocol;
 use crate::state::PlayingState;
-use crate::error::ProtocolError;
-use crate::payloads::{SpeakingFlags, EncryptionMode};
 
-use std::thread;
-use std::time::{Instant, Duration};
+use parking_lot::Mutex;
 use std::io::ErrorKind;
 use std::io::Read;
 use std::net::UdpSocket;
 use std::sync::Arc;
-use parking_lot::Mutex;
+use std::thread;
+use std::time::{Duration, Instant};
 
 use std::process::{Child, Command, Stdio};
 
-use xsalsa20poly1305::XSalsa20Poly1305;
-use xsalsa20poly1305::aead::{AeadInPlace, NewAead, generic_array::GenericArray};
-use xsalsa20poly1305::aead::Buffer;
 use rand::RngCore;
+use xsalsa20poly1305::aead::Buffer;
+use xsalsa20poly1305::aead::{generic_array::GenericArray, AeadInPlace, NewAead};
+use xsalsa20poly1305::XSalsa20Poly1305;
 
 pub const SAMPLING_RATE: u16 = 48000;
 pub const CHANNELS: u16 = 2;
@@ -58,14 +58,22 @@ pub struct FFmpegPCMAudio {
 impl FFmpegPCMAudio {
     pub fn new(input: &str) -> Result<Self, ProtocolError> {
         let process = Command::new("ffmpeg")
-                              .arg("-i")
-                              .arg(&input)
-                              .args(&["-f", "s16le", "-ar", "48000", "-ac", "2", "-loglevel", "warning", "pipe:1"])
-                              .stdout(Stdio::piped())
-                              .spawn()?;
-        Ok(Self {
-            process: process,
-        })
+            .arg("-i")
+            .arg(&input)
+            .args(&[
+                "-f",
+                "s16le",
+                "-ar",
+                "48000",
+                "-ac",
+                "2",
+                "-loglevel",
+                "warning",
+                "pipe:1",
+            ])
+            .stdout(Stdio::piped())
+            .spawn()?;
+        Ok(Self { process: process })
     }
 }
 
@@ -122,8 +130,7 @@ impl Buffer for InPlaceBuffer<'_> {
     fn extend_from_slice(&mut self, other: &[u8]) -> Result<(), xsalsa20poly1305::aead::Error> {
         if self.length + other.len() > self.capacity {
             Err(xsalsa20poly1305::aead::Error)
-        }
-        else {
+        } else {
             self.slice[self.length..self.length + other.len()].copy_from_slice(&other);
             self.length += other.len();
             Ok(())
@@ -171,10 +178,20 @@ struct AudioEncoder {
     // 2) The cipher is done in-place
     // 3) The final packet to send is through this buffer as well
     buffer: PacketBuffer,
-    encrypter: fn(&XSalsa20Poly1305, u32, &[u8], &mut dyn Buffer) ->  Result<(), xsalsa20poly1305::aead::Error>,
+    encrypter: fn(
+        &XSalsa20Poly1305,
+        u32,
+        &[u8],
+        &mut dyn Buffer,
+    ) -> Result<(), xsalsa20poly1305::aead::Error>,
 }
 
-fn encrypt_xsalsa20_poly1305(cipher: &XSalsa20Poly1305, _lite: u32, header: &[u8], data: &mut dyn Buffer) -> Result<(), xsalsa20poly1305::aead::Error> {
+fn encrypt_xsalsa20_poly1305(
+    cipher: &XSalsa20Poly1305,
+    _lite: u32,
+    header: &[u8],
+    data: &mut dyn Buffer,
+) -> Result<(), xsalsa20poly1305::aead::Error> {
     let mut nonce: [u8; 24] = [0; 24];
     nonce[0..12].copy_from_slice(&header);
 
@@ -183,7 +200,12 @@ fn encrypt_xsalsa20_poly1305(cipher: &XSalsa20Poly1305, _lite: u32, header: &[u8
     Ok(())
 }
 
-fn encrypt_xsalsa20_poly1305_suffix(cipher: &XSalsa20Poly1305, _lite: u32, _header: &[u8], data: &mut dyn Buffer) -> Result<(), xsalsa20poly1305::aead::Error> {
+fn encrypt_xsalsa20_poly1305_suffix(
+    cipher: &XSalsa20Poly1305,
+    _lite: u32,
+    _header: &[u8],
+    data: &mut dyn Buffer,
+) -> Result<(), xsalsa20poly1305::aead::Error> {
     let mut nonce: [u8; 24] = [0; 24];
     rand::thread_rng().fill_bytes(&mut nonce);
 
@@ -192,7 +214,12 @@ fn encrypt_xsalsa20_poly1305_suffix(cipher: &XSalsa20Poly1305, _lite: u32, _head
     Ok(())
 }
 
-fn encrypt_xsalsa20_poly1305_lite(cipher: &XSalsa20Poly1305, lite: u32, _header: &[u8], data: &mut dyn Buffer) -> Result<(), xsalsa20poly1305::aead::Error> {
+fn encrypt_xsalsa20_poly1305_lite(
+    cipher: &XSalsa20Poly1305,
+    lite: u32,
+    _header: &[u8],
+    data: &mut dyn Buffer,
+) -> Result<(), xsalsa20poly1305::aead::Error> {
     let mut nonce: [u8; 24] = [0; 24];
     nonce[0..4].copy_from_slice(&lite.to_be_bytes());
 
@@ -203,9 +230,11 @@ fn encrypt_xsalsa20_poly1305_lite(cipher: &XSalsa20Poly1305, lite: u32, _header:
 
 impl AudioEncoder {
     fn from_protocol(protocol: &DiscordVoiceProtocol) -> Result<Self, ProtocolError> {
-        let mut encoder = audiopus::coder::Encoder::new(audiopus::SampleRate::Hz48000,
-                                                        audiopus::Channels::Stereo,
-                                                  audiopus::Application::Audio)?;
+        let mut encoder = audiopus::coder::Encoder::new(
+            audiopus::SampleRate::Hz48000,
+            audiopus::Channels::Stereo,
+            audiopus::Application::Audio,
+        )?;
 
         encoder.set_bitrate(audiopus::Bitrate::BitsPerSecond(128000))?;
         encoder.enable_inband_fec()?;
@@ -259,17 +288,25 @@ impl AudioEncoder {
     }
 
     /// Sends already opus encoded data over the wire
-    fn send_opus_packet(&mut self, socket: &UdpSocket, addr: &std::net::SocketAddr, size: usize) -> Result<(), ProtocolError> {
+    fn send_opus_packet(
+        &mut self,
+        socket: &UdpSocket,
+        addr: &std::net::SocketAddr,
+        size: usize,
+    ) -> Result<(), ProtocolError> {
         self.sequence = self.sequence.wrapping_add(1);
         let size = self.prepare_packet(size)?;
         // println!("Sending buffer: {:?}", &self.buffer[0..size]);
         match socket.send_to(&self.buffer[0..size], addr) {
             Err(ref e) if e.kind() == ErrorKind::WouldBlock || e.kind() == ErrorKind::TimedOut => {
-                println!("A packet has been dropped (seq: {}, timestamp: {})", &self.sequence, &self.timestamp);
+                println!(
+                    "A packet has been dropped (seq: {}, timestamp: {})",
+                    &self.sequence, &self.timestamp
+                );
                 return Ok(());
-            },
+            }
             Err(e) => return Err(ProtocolError::from(e)),
-            _ => {},
+            _ => {}
         };
 
         self.timestamp = self.timestamp.wrapping_add(SAMPLES_PER_FRAME);
@@ -280,6 +317,7 @@ impl AudioEncoder {
 type Protocol = Arc<Mutex<DiscordVoiceProtocol>>;
 type Source = Arc<Mutex<Box<dyn AudioSource>>>;
 
+#[allow(dead_code)]
 pub struct AudioPlayer {
     thread: thread::JoinHandle<()>,
     protocol: Protocol,
@@ -287,7 +325,11 @@ pub struct AudioPlayer {
     source: Source,
 }
 
-fn audio_play_loop(protocol: &Protocol, state: &Arc<PlayingState>, source: &Source) -> Result<(), ProtocolError> {
+fn audio_play_loop(
+    protocol: &Protocol,
+    state: &Arc<PlayingState>,
+    source: &Source,
+) -> Result<(), ProtocolError> {
     let mut next_iteration = Instant::now();
 
     let (mut encoder, mut socket) = {
@@ -324,9 +366,7 @@ fn audio_play_loop(protocol: &Protocol, state: &Arc<PlayingState>, source: &Sour
         let buffer_size = {
             let mut aud = source.lock();
             match aud.get_type() {
-                AudioType::Opus => {
-                    aud.read_opus_frame(&mut encoder.buffer[BUFFER_OFFSET..])
-                }
+                AudioType::Opus => aud.read_opus_frame(&mut encoder.buffer[BUFFER_OFFSET..]),
                 AudioType::Pcm => {
                     if let Some(num) = aud.read_pcm_frame(&mut encoder.pcm_buffer) {
                         // println!("Read {} bytes", &num);
@@ -334,14 +374,13 @@ fn audio_play_loop(protocol: &Protocol, state: &Arc<PlayingState>, source: &Sour
                             Ok(bytes) => {
                                 // println!("Encoded {} bytes", &bytes);
                                 Some(bytes)
-                            },
+                            }
                             Err(e) => {
                                 println!("Error encoding bytes: {:?}", &e);
                                 return Err(e.into());
                             }
                         }
-                    }
-                    else {
+                    } else {
                         None
                     }
                 }
@@ -355,8 +394,7 @@ fn audio_play_loop(protocol: &Protocol, state: &Arc<PlayingState>, source: &Sour
                 next_iteration = next_iteration.max(now);
                 thread::sleep(next_iteration - now);
             }
-        }
-        else {
+        } else {
             state.finished();
         }
     }
@@ -366,8 +404,9 @@ fn audio_play_loop(protocol: &Protocol, state: &Arc<PlayingState>, source: &Sour
 
 impl AudioPlayer {
     pub fn new<After>(after: After, protocol: Protocol, source: Source) -> Self
-    where After: FnOnce(Option<ProtocolError>) -> (),
-          After: Send + 'static
+    where
+        After: FnOnce(Option<ProtocolError>) -> (),
+        After: Send + 'static,
     {
         let state = {
             let guard = protocol.lock();

@@ -1,16 +1,16 @@
-use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyBytes};
 use pyo3::create_exception;
+use pyo3::prelude::*;
+use pyo3::types::{PyBytes, PyDict};
 
-use std::thread;
 use std::sync::Arc;
+use std::thread;
 
 use parking_lot::Mutex;
 
-pub mod protocol;
-pub mod player;
-pub mod payloads;
 pub mod error;
+pub mod payloads;
+pub mod player;
+pub mod protocol;
 pub(crate) mod state;
 
 create_exception!(_native_voice, ReconnectError, pyo3::exceptions::Exception);
@@ -30,13 +30,9 @@ impl std::convert::From<error::ProtocolError> for PyErr {
         match err {
             error::ProtocolError::Closed(code) if code_can_be_handled(code) => {
                 ReconnectError::py_err(code)
-            },
-            error::ProtocolError::Closed(code) => {
-                ConnectionClosed::py_err(code)
             }
-            _ => {
-                ConnectionError::py_err(err.to_string())
-            }
+            error::ProtocolError::Closed(code) => ConnectionClosed::py_err(code),
+            _ => ConnectionError::py_err(err.to_string()),
         }
     }
 }
@@ -113,9 +109,13 @@ impl VoiceConnection {
         }
 
         let source = Box::new(player::FFmpegPCMAudio::new(input.as_str())?);
-        let player = player::AudioPlayer::new(|error| {
-            println!("Audio Player Error: {:?}", error);
-        }, Arc::clone(&self.protocol), Arc::new(Mutex::new(source)));
+        let player = player::AudioPlayer::new(
+            |error| {
+                println!("Audio Player Error: {:?}", error);
+            },
+            Arc::clone(&self.protocol),
+            Arc::new(Mutex::new(source)),
+        );
 
         self.player = Some(player);
         Ok(())
@@ -124,8 +124,7 @@ impl VoiceConnection {
     fn is_playing(&self) -> bool {
         if let Some(player) = &self.player {
             player.is_playing()
-        }
-        else {
+        } else {
             false
         }
     }
@@ -164,7 +163,10 @@ impl VoiceConnection {
         result.set_item("port", proto.port)?;
         result.set_item("token", proto.token.clone())?;
         result.set_item("ssrc", proto.ssrc)?;
-        result.set_item("last_heartbeat", proto.last_heartbeat.elapsed().as_secs_f32())?;
+        result.set_item(
+            "last_heartbeat",
+            proto.last_heartbeat.elapsed().as_secs_f32(),
+        )?;
         result.set_item("player_connected", self.player.is_some())?;
         Ok(result)
     }
@@ -201,7 +203,12 @@ impl VoiceConnector {
         }
     }
 
-    fn update_socket(&mut self, token: String, server_id: String, endpoint: String) -> PyResult<()> {
+    fn update_socket(
+        &mut self,
+        token: String,
+        server_id: String,
+        endpoint: String,
+    ) -> PyResult<()> {
         self.token = token;
         self.server_id = server_id;
         self.endpoint = endpoint;
@@ -216,26 +223,23 @@ impl VoiceConnector {
         };
 
         let mut builder = protocol::ProtocolBuilder::new(self.endpoint.clone());
-        builder.server(self.server_id.clone())
-               .session(self.session_id.clone())
-               .auth(self.token.clone())
-               .user(self.user_id.to_string());
+        builder
+            .server(self.server_id.clone())
+            .session(self.session_id.clone())
+            .auth(self.token.clone())
+            .user(self.user_id.to_string());
 
         thread::spawn(move || {
             let result = {
                 match builder.connect() {
                     Err(e) => Err(e),
-                    Ok(mut protocol) => {
-                        protocol.finish_flow(false).and(Ok(protocol))
-                    }
+                    Ok(mut protocol) => protocol.finish_flow(false).and(Ok(protocol)),
                 }
             };
             let gil = Python::acquire_gil();
             let py = gil.python();
             let _ = match result {
-                Err(e) => {
-                    set_exception(py, loop_, future, PyErr::from(e))
-                }
+                Err(e) => set_exception(py, loop_, future, PyErr::from(e)),
                 Ok(protocol) => {
                     let object = VoiceConnection {
                         protocol: Arc::new(Mutex::new(protocol)),
@@ -249,8 +253,8 @@ impl VoiceConnector {
     }
 }
 
+use xsalsa20poly1305::aead::{generic_array::GenericArray, Aead, AeadInPlace, Buffer, NewAead};
 use xsalsa20poly1305::XSalsa20Poly1305;
-use xsalsa20poly1305::aead::{Aead, Buffer, AeadInPlace, NewAead, generic_array::GenericArray};
 
 #[pyclass]
 struct Debugger {
@@ -264,9 +268,11 @@ struct Debugger {
 }
 
 fn get_encoder() -> Result<audiopus::coder::Encoder, error::ProtocolError> {
-    let mut encoder = audiopus::coder::Encoder::new(audiopus::SampleRate::Hz48000,
+    let mut encoder = audiopus::coder::Encoder::new(
+        audiopus::SampleRate::Hz48000,
         audiopus::Channels::Stereo,
-  audiopus::Application::Audio)?;
+        audiopus::Application::Audio,
+    )?;
 
     encoder.set_bitrate(audiopus::Bitrate::BitsPerSecond(128 * 1024))?;
     encoder.enable_inband_fec()?;
@@ -296,12 +302,13 @@ impl Debugger {
     fn encode_opus<'py>(&self, py: Python<'py>, buffer: &PyBytes) -> PyResult<&'py PyBytes> {
         let bytes = buffer.as_bytes();
         if bytes.len() != 3840 {
-            return Err(pyo3::exceptions::ValueError::py_err("byte length must be 3840 bytes"));
+            return Err(pyo3::exceptions::ValueError::py_err(
+                "byte length must be 3840 bytes",
+            ));
         }
 
-        let as_i16: &[i16] = unsafe {
-            std::slice::from_raw_parts(bytes.as_ptr() as *const i16, bytes.len() / 2)
-        };
+        let as_i16: &[i16] =
+            unsafe { std::slice::from_raw_parts(bytes.as_ptr() as *const i16, bytes.len() / 2) };
 
         let mut output = [0u8; 2000];
         match self.opus.encode(&as_i16, &mut output) {
@@ -310,23 +317,31 @@ impl Debugger {
         }
     }
 
-    fn encrypt<'py>(&self, py: Python<'py>, nonce: &PyBytes, buffer: &PyBytes) -> PyResult<&'py PyBytes> {
+    fn encrypt<'py>(
+        &self,
+        py: Python<'py>,
+        nonce: &PyBytes,
+        buffer: &PyBytes,
+    ) -> PyResult<&'py PyBytes> {
         let nonce = GenericArray::from_slice(nonce.as_bytes());
         match self.cipher.encrypt(nonce, buffer.as_bytes()) {
             Ok(text) => Ok(PyBytes::new(py, text.as_slice())),
-            Err(_) => Err(pyo3::exceptions::RuntimeError::py_err("Could not encrypt for whatever reason"))
+            Err(_) => Err(pyo3::exceptions::RuntimeError::py_err(
+                "Could not encrypt for whatever reason",
+            )),
         }
     }
 
     fn prepare_packet<'py>(&mut self, py: Python<'py>, buffer: &PyBytes) -> PyResult<&'py PyBytes> {
         let bytes = buffer.as_bytes();
         if bytes.len() != 3840 {
-            return Err(pyo3::exceptions::ValueError::py_err("byte length must be 3840 bytes"));
+            return Err(pyo3::exceptions::ValueError::py_err(
+                "byte length must be 3840 bytes",
+            ));
         }
 
-        let pcm: &[i16] = unsafe {
-            std::slice::from_raw_parts(bytes.as_ptr() as *const i16, bytes.len() / 2)
-        };
+        let pcm: &[i16] =
+            unsafe { std::slice::from_raw_parts(bytes.as_ptr() as *const i16, bytes.len() / 2) };
 
         let mut output = [0u8; player::MAX_BUFFER_SIZE];
         let offset = match self.opus.encode(&pcm, &mut output[12..]) {
@@ -344,11 +359,14 @@ impl Debugger {
         let mut nonce = [0u8; 24];
         nonce[0..4].copy_from_slice(&self.lite_nonce.to_be_bytes());
         let mut buffer = player::InPlaceBuffer::new(&mut output[12..], offset);
-        if let Err(e) = self.cipher.encrypt_in_place(GenericArray::from_slice(&nonce), b"", &mut buffer) {
+        if let Err(e) =
+            self.cipher
+                .encrypt_in_place(GenericArray::from_slice(&nonce), b"", &mut buffer)
+        {
             return Err(pyo3::exceptions::RuntimeError::py_err(e.to_string()));
         }
 
-        if let Err(e) =  buffer.extend_from_slice(&nonce) {
+        if let Err(e) = buffer.extend_from_slice(&nonce) {
             return Err(pyo3::exceptions::RuntimeError::py_err(e.to_string()));
         }
 

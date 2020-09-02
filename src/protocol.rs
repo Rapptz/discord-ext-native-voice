@@ -1,21 +1,21 @@
 #![allow(dead_code)]
 
-use tungstenite::protocol::{WebSocket, frame::CloseFrame, frame::coding::CloseCode};
 use tungstenite::error::Error as TungError;
+use tungstenite::protocol::{frame::coding::CloseCode, frame::CloseFrame, WebSocket};
 use tungstenite::Message;
 
-use std::time::Instant;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket, TcpStream};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream, UdpSocket};
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Instant;
 
 use std::io::ErrorKind;
 
 use native_tls::{TlsConnector, TlsStream};
 
-use crate::state::PlayingState;
-use crate::payloads::*;
 use crate::error::*;
+use crate::payloads::*;
+use crate::state::PlayingState;
 
 pub struct DiscordVoiceProtocol {
     pub endpoint: String,
@@ -87,7 +87,7 @@ impl ProtocolBuilder {
             println!("Connecting to {:?}", &url);
             match tungstenite::client::client(&url, stream) {
                 Ok((ws, _)) => ws,
-                Err(e) => return Err(custom_error(e.to_string().as_str()))
+                Err(e) => return Err(custom_error(e.to_string().as_str())),
             }
         };
 
@@ -130,8 +130,7 @@ impl DiscordVoiceProtocol {
         self.poll()?;
         if resume {
             self.resume()?;
-        }
-        else {
+        } else {
             self.identify()?;
         }
 
@@ -146,7 +145,7 @@ impl DiscordVoiceProtocol {
         self.close_code = code;
         self.ws.close(Some(CloseFrame {
             code: CloseCode::from(code),
-            reason: std::borrow::Cow::Owned("closing connection".to_string())
+            reason: std::borrow::Cow::Owned("closing connection".to_string()),
         }))?;
         Ok(())
     }
@@ -158,13 +157,13 @@ impl DiscordVoiceProtocol {
 
         let msg = {
             match self.ws.read_message() {
-                Err(TungError::Io(ref e)) if e.kind() == ErrorKind::WouldBlock || e.kind() == ErrorKind::TimedOut => {
+                Err(TungError::Io(ref e))
+                    if e.kind() == ErrorKind::WouldBlock || e.kind() == ErrorKind::TimedOut =>
+                {
                     // We'll just continue reading since we timed out?
                     return Ok(());
-                },
-                Err(e) => {
-                    return Err(ProtocolError::from(e))
-                },
+                }
+                Err(e) => return Err(ProtocolError::from(e)),
                 Ok(msg) => msg,
             }
         };
@@ -182,14 +181,14 @@ impl DiscordVoiceProtocol {
                         let socket = self.ws.get_ref().get_ref();
                         socket.set_read_timeout(Some(std::time::Duration::from_millis(5000)))?;
                         self.last_heartbeat = Instant::now();
-                    },
+                    }
                     Opcode::READY => {
                         let payload: Ready = serde_json::from_str(payload.d.get())?;
                         self.handle_ready(payload)?;
-                    },
+                    }
                     Opcode::HEARTBEAT => {
                         self.heartbeat()?;
-                    },
+                    }
                     Opcode::HEARTBEAT_ACK => {
                         let now = Instant::now();
                         let delta = now.duration_since(self.last_heartbeat);
@@ -203,11 +202,11 @@ impl DiscordVoiceProtocol {
                         self.encryption = EncryptionMode::from_str(payload.mode.as_str())?;
                         self.secret_key = payload.secret_key;
                         self.state.connected();
-                    },
+                    }
                     // The rest are unhandled for now
                     _ => {}
                 }
-            },
+            }
             Message::Close(msg) => {
                 println!("Received close frame: {:?}", &msg);
                 if let Some(frame) = msg {
@@ -229,8 +228,7 @@ impl DiscordVoiceProtocol {
     fn get_average_latency(&self) -> f64 {
         if self.recent_acks.len() == 0 {
             f64::NAN
-        }
-        else {
+        } else {
             self.recent_acks.iter().sum::<f64>() / self.recent_acks.len() as f64
         }
     }
@@ -238,7 +236,8 @@ impl DiscordVoiceProtocol {
     fn heartbeat(&mut self) -> Result<(), ProtocolError> {
         let msg = Heartbeat::now();
         println!("Heatbeating... {:?}", &msg);
-        self.ws.write_message(Message::text(serde_json::to_string(&msg)?))?;
+        self.ws
+            .write_message(Message::text(serde_json::to_string(&msg)?))?;
         self.last_heartbeat = Instant::now();
         Ok(())
     }
@@ -251,7 +250,8 @@ impl DiscordVoiceProtocol {
             token: self.token.clone(),
         });
         println!("Identifying... {:?}", &msg);
-        self.ws.write_message(Message::text(serde_json::to_string(&msg)?))?;
+        self.ws
+            .write_message(Message::text(serde_json::to_string(&msg)?))?;
         Ok(())
     }
 
@@ -262,7 +262,8 @@ impl DiscordVoiceProtocol {
             session_id: self.session_id.clone(),
         });
         println!("Resuming... {:?}", &msg);
-        self.ws.write_message(Message::text(serde_json::to_string(&msg)?))?;
+        self.ws
+            .write_message(Message::text(serde_json::to_string(&msg)?))?;
         Ok(())
     }
 
@@ -271,7 +272,10 @@ impl DiscordVoiceProtocol {
         self.port = payload.port;
         self.encryption = payload.get_encryption_mode()?;
         self.endpoint_ip = payload.ip;
-        let addr = SocketAddr::new(IpAddr::V4(self.endpoint_ip.as_str().parse::<Ipv4Addr>()?), self.port);
+        let addr = SocketAddr::new(
+            IpAddr::V4(self.endpoint_ip.as_str().parse::<Ipv4Addr>()?),
+            self.port,
+        );
         println!("Address found: {:?}", &addr);
         // I'm unsure why I have to explicitly bind with Rust
         let socket = UdpSocket::bind("0.0.0.0:0")?;
@@ -299,14 +303,15 @@ impl DiscordVoiceProtocol {
 
         // select protocol
         let to_send = SelectProtocol::from_addr(ip, port, self.encryption);
-        self.ws.write_message(Message::text(serde_json::to_string(&to_send)?))?;
+        self.ws
+            .write_message(Message::text(serde_json::to_string(&to_send)?))?;
         Ok(())
     }
 
     fn get_socket<'a>(&'a self) -> Result<&'a UdpSocket, ProtocolError> {
         match &self.socket {
             Some(s) => Ok(s),
-            None => Err(custom_error("no socket found"))
+            None => Err(custom_error("no socket found")),
         }
     }
 
@@ -317,18 +322,24 @@ impl DiscordVoiceProtocol {
         buffer[0..2].copy_from_slice(&1u16.to_be_bytes()); // 1 = send
         buffer[2..4].copy_from_slice(&70u16.to_be_bytes()); // 70 = length
         buffer[4..8].copy_from_slice(&self.ssrc.to_be_bytes()); // the SSRC
+
         // rest of this is unused
         // let's send the packet
         socket.send(&buffer)?;
+
         // receive the new buffer
         let mut buffer: [u8; 70] = [0; 70];
         socket.recv(&mut buffer)?;
 
         // The IP is surrounded by 4 leading bytes and ends on the first encounter of a null byte
-        let ip_end = &buffer[4..].iter().position(|&b| b == 0).ok_or_else(|| custom_error("could not find end of IP"))?;
+        let ip_end = &buffer[4..]
+            .iter()
+            .position(|&b| b == 0)
+            .ok_or_else(|| custom_error("could not find end of IP"))?;
         let ip: String = {
-            let ip_slice = &buffer[4..4+ip_end];
-            let as_str = std::str::from_utf8(ip_slice).map_err(|_| custom_error("invalid IP found (not UTF-8"))?;
+            let ip_slice = &buffer[4..4 + ip_end];
+            let as_str = std::str::from_utf8(ip_slice)
+                .map_err(|_| custom_error("invalid IP found (not UTF-8"))?;
             String::from(as_str)
         };
         // The port is the last 2 bytes in big endian
@@ -339,7 +350,8 @@ impl DiscordVoiceProtocol {
 
     pub fn speaking(&mut self, flags: SpeakingFlags) -> Result<(), ProtocolError> {
         let msg: Speaking = Speaking::new(flags);
-        self.ws.write_message(Message::text(serde_json::to_string(&msg)?))?;
+        self.ws
+            .write_message(Message::text(serde_json::to_string(&msg)?))?;
         Ok(())
     }
 
