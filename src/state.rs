@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use parking_lot::{Mutex, Condvar};
+use parking_lot::{Condvar, Mutex};
 // use crossbeam_channel::{bounded, Sender, Receiver};
 
 const DISCONNECTED: u8 = 0;
