@@ -116,13 +116,13 @@ impl InPlaceBuffer<'_> {
 
 impl<'a> AsRef<[u8]> for InPlaceBuffer<'a> {
     fn as_ref(&self) -> &[u8] {
-        self.slice
+        &self.slice[..self.length]
     }
 }
 
 impl<'a> AsMut<[u8]> for InPlaceBuffer<'a> {
     fn as_mut(&mut self) -> &mut [u8] {
-        &mut self.slice
+        &mut self.slice[..self.length]
     }
 }
 
@@ -143,6 +143,7 @@ impl Buffer for InPlaceBuffer<'_> {
             for i in self.slice[len..].iter_mut() {
                 *i = 0;
             }
+            self.length = len;
         }
     }
 
