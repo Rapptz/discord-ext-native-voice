@@ -107,8 +107,8 @@ impl SelectProtocol {
             d: SelectProtocolWrapper {
                 protocol: "udp".to_string(),
                 data: SelectProtocolInfo {
-                    address: address,
-                    port: port,
+                    address,
+                    port,
                     mode: mode.into(),
                 },
             }
@@ -159,7 +159,7 @@ impl SpeakingFlags {
 
     pub fn new(value: u8) -> Self {
         Self {
-            value: value
+            value
         }
     }
 
