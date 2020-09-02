@@ -183,7 +183,7 @@ impl DiscordVoiceProtocol {
                         self.heartbeat_interval = interval.min(5000);
                         // Get the original stream
                         let socket = self.ws.get_ref().get_ref();
-                        socket.set_read_timeout(Some(std::time::Duration::from_millis(5000)))?;
+                        socket.set_read_timeout(Some(std::time::Duration::from_millis(1000)))?;
                         self.last_heartbeat = Instant::now();
                     }
                     Opcode::READY => {
