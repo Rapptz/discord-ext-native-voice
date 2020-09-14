@@ -9,7 +9,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-pyo3 = { version = "0.11.1", features = ["extension-module"] }
+pyo3 = { version = "0.12", features = ["extension-module"] }
 native-tls = { version = "0.2.3"}
 tungstenite = { version = "0.11.1", features = ["tls"] }
 serde = { version = "1.0", features = ["derive"] }

@@ -13,9 +13,9 @@ pub mod player;
 pub mod protocol;
 pub(crate) mod state;
 
-create_exception!(_native_voice, ReconnectError, pyo3::exceptions::Exception);
-create_exception!(_native_voice, ConnectionError, pyo3::exceptions::Exception);
-create_exception!(_native_voice, ConnectionClosed, pyo3::exceptions::Exception);
+create_exception!(_native_voice, ReconnectError, pyo3::exceptions::PyException);
+create_exception!(_native_voice, ConnectionError, pyo3::exceptions::PyException);
+create_exception!(_native_voice, ConnectionClosed, pyo3::exceptions::PyException);
 
 fn code_can_be_handled(code: u16) -> bool {
     // Non-resumable close-codes are:
@@ -29,10 +29,10 @@ impl std::convert::From<error::ProtocolError> for PyErr {
     fn from(err: error::ProtocolError) -> Self {
         match err {
             error::ProtocolError::Closed(code) if code_can_be_handled(code) => {
-                ReconnectError::py_err(code)
+                ReconnectError::new_err(code)
             }
-            error::ProtocolError::Closed(code) => ConnectionClosed::py_err(code),
-            _ => ConnectionError::py_err(err.to_string()),
+            error::ProtocolError::Closed(code) => ConnectionClosed::new_err(code),
+            _ => ConnectionError::new_err(err.to_string()),
         }
     }
 }
@@ -302,7 +302,7 @@ impl Debugger {
     fn encode_opus<'py>(&self, py: Python<'py>, buffer: &PyBytes) -> PyResult<&'py PyBytes> {
         let bytes = buffer.as_bytes();
         if bytes.len() != 3840 {
-            return Err(pyo3::exceptions::ValueError::py_err(
+            return Err(pyo3::exceptions::PyValueError::new_err(
                 "byte length must be 3840 bytes",
             ));
         }
@@ -313,7 +313,7 @@ impl Debugger {
         let mut output = [0u8; 2000];
         match self.opus.encode(&as_i16, &mut output) {
             Ok(size) => Ok(PyBytes::new(py, &output[..size])),
-            Err(e) => Err(pyo3::exceptions::RuntimeError::py_err(e.to_string())),
+            Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
         }
     }
 
@@ -326,7 +326,7 @@ impl Debugger {
         let nonce = GenericArray::from_slice(nonce.as_bytes());
         match self.cipher.encrypt(nonce, buffer.as_bytes()) {
             Ok(text) => Ok(PyBytes::new(py, text.as_slice())),
-            Err(_) => Err(pyo3::exceptions::RuntimeError::py_err(
+            Err(_) => Err(pyo3::exceptions::PyRuntimeError::new_err(
                 "Could not encrypt for whatever reason",
             )),
         }
@@ -335,7 +335,7 @@ impl Debugger {
     fn prepare_packet<'py>(&mut self, py: Python<'py>, buffer: &PyBytes) -> PyResult<&'py PyBytes> {
         let bytes = buffer.as_bytes();
         if bytes.len() != 3840 {
-            return Err(pyo3::exceptions::ValueError::py_err(
+            return Err(pyo3::exceptions::PyValueError::new_err(
                 "byte length must be 3840 bytes",
             ));
         }
@@ -346,7 +346,7 @@ impl Debugger {
         let mut output = [0u8; player::MAX_BUFFER_SIZE];
         let offset = match self.opus.encode(&pcm, &mut output[12..]) {
             Ok(size) => size,
-            Err(e) => return Err(pyo3::exceptions::RuntimeError::py_err(e.to_string())),
+            Err(e) => return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
         };
 
         self.sequence = self.sequence.wrapping_add(1);
@@ -363,11 +363,11 @@ impl Debugger {
             self.cipher
                 .encrypt_in_place(GenericArray::from_slice(&nonce), b"", &mut buffer)
         {
-            return Err(pyo3::exceptions::RuntimeError::py_err(e.to_string()));
+            return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
         }
 
         if let Err(e) = buffer.extend_from_slice(&nonce) {
-            return Err(pyo3::exceptions::RuntimeError::py_err(e.to_string()));
+            return Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()));
         }
 
         self.lite_nonce = self.lite_nonce.wrapping_add(1);
