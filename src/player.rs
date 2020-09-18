@@ -284,8 +284,8 @@ impl AudioEncoder {
         Ok(buffer.len())
     }
 
-    fn encode_pcm_buffer(&mut self, size: usize) -> Result<usize, audiopus::error::Error> {
-        self.opus.encode(&self.pcm_buffer[..size], &mut self.buffer)
+    fn encode_pcm_buffer(&mut self) -> Result<usize, audiopus::error::Error> {
+        self.opus.encode(&self.pcm_buffer, &mut self.buffer[BUFFER_OFFSET..])
     }
 
     /// Sends already opus encoded data over the wire
@@ -369,9 +369,9 @@ fn audio_play_loop(
             match aud.get_type() {
                 AudioType::Opus => aud.read_opus_frame(&mut encoder.buffer[BUFFER_OFFSET..]),
                 AudioType::Pcm => {
-                    if let Some(num) = aud.read_pcm_frame(&mut encoder.pcm_buffer) {
+                    if let Some(_) = aud.read_pcm_frame(&mut encoder.pcm_buffer) {
                         // println!("Read {} bytes", &num);
-                        match encoder.encode_pcm_buffer(num) {
+                        match encoder.encode_pcm_buffer() {
                             Ok(bytes) => {
                                 // println!("Encoded {} bytes", &bytes);
                                 Some(bytes)
