@@ -30,7 +30,7 @@ class VoiceClient(discord.VoiceProtocol):
             if channel_id is None:
                 return await self.disconnect()
 
-            self.channel = channel_id and self.guild.get_channel(int(chananel_id))
+            self.channel = channel_id and self.guild.get_channel(int(channel_id))
         else:
             self._voice_state_complete.set()
 

@@ -3,11 +3,11 @@ environment:
   matrix:
     - RUST_TARGET: x86_64-pc-windows-msvc
       CIBW_SKIP: "*win32* cp27-* cp33-* cp34-* pp*"
-      CIBW_BEFORE_BUILD: C:\Python36\python.exe -m pip install setuptools setuptools-rust==0.11.3
+      CIBW_BEFORE_BUILD: C:\Python36\python.exe -m pip install setuptools setuptools-rust
 
     - RUST_TARGET: i686-pc-windows-msvc
       CIBW_SKIP: "*win_amd64* cp27-* cp33-* cp34-* pp*"
-      CIBW_BEFORE_BUILD: C:\Python36\python.exe -m pip install setuptools setuptools-rust==0.11.3
+      CIBW_BEFORE_BUILD: C:\Python36\python.exe -m pip install setuptools setuptools-rust
 
 install:
   - appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
@@ -15,8 +15,8 @@ install:
   - set PATH=%PATH%;%USERPROFILE%\.cargo\bin
   - rustc -vV
   - cargo -vV
-  - C:\Python36\python.exe -m pip install -U pip
-  - C:\Python36\python.exe -m pip install wheel cibuildwheel setuptools setuptools-rust==0.11.3
+  - C:\Python36\python.exe -m pip install -U pip cibuildwheel
+  - C:\Python36\python.exe -m pip install -U -r requirements-dev.txt
 
 build_script:
   - C:\Python36\python.exe -m cibuildwheel --output-dir wheelhouse
