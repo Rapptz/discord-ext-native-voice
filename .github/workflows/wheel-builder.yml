@@ -112,7 +112,13 @@ jobs:
       - name: Install Python dependencies
         shell: bash
         run: |
-          python -m pip install -U pip setuptools wheel "cibuildwheel @ git+https://github.com/russkel/cibuildwheel.git@qemu"
+          python -m pip install -U pip setuptools wheel "cibuildwheel @ git+https://github.com/asfaltboy/cibuildwheel@support-quemu-on-github"
+
+      - name: Set up Qemu
+        id: qemu
+        uses: docker/setup-qemu-action@v1
+        with:
+          platforms: ${{ matrix.architecture }}
 
       - name: Build wheels
         shell: bash
@@ -130,7 +136,7 @@ jobs:
           CIBW_ENVIRONMENT: 'PATH="$PATH:$HOME/.cargo/bin" LIBOPUS_STATIC=1'
 
         run: |
-          python -m cibuildwheel --output-dir wheelhouse --use-binfmt
+          python -m cibuildwheel --output-dir wheelhouse --arch ${{ matrix.architecture }}
 
       - name: Upload wheels
         uses: actions/upload-artifact@v2
