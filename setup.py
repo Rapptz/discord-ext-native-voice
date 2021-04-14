@@ -4,7 +4,7 @@ from setuptools import setup
 from setuptools_rust import RustExtension
 
 setup_requires = [
-    'setuptools-rust>=0.11.1,<0.12',
+    'setuptools-rust==0.12.1',
     'wheel',
 ]
 
