@@ -2,11 +2,11 @@ environment:
   TWINE_USERNAME: __token__
   matrix:
     - RUST_TARGET: x86_64-pc-windows-msvc
-      CIBW_SKIP: "*win32* cp27-* cp33-* cp34-* pp*"
+      CIBW_SKIP: "*win32* cp27-* cp33-* cp34-* cp35-* pp*"
       CIBW_BEFORE_BUILD: C:\Python36\python.exe -m pip install setuptools setuptools-rust
 
     - RUST_TARGET: i686-pc-windows-msvc
-      CIBW_SKIP: "*win_amd64* cp27-* cp33-* cp34-* pp*"
+      CIBW_SKIP: "*win_amd64* cp27-* cp33-* cp34-* cp35-* pp*"
       CIBW_BEFORE_BUILD: C:\Python36\python.exe -m pip install setuptools setuptools-rust
 
 install:
