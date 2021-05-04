@@ -6,6 +6,9 @@ __pycache__/
 *.pcm
 *.log
 *.pyd
+build/
+dist/
+wheelhouse/
 
 # Ignore top level py files except setup.py
 /*.py
