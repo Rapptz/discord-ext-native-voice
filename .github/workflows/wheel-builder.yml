@@ -67,7 +67,7 @@ jobs:
 
           # Build targeting
           CIBW_BUILD: ${{ matrix.target.cibw-build }}
-          CIBW_SKIP: cp2?-* pp*
+          CIBW_SKIP: cp2?-* cp35-* pp*
 
           # Build process
           CIBW_BEFORE_ALL_LINUX: source ./scripts/before_install.sh
@@ -89,7 +89,6 @@ jobs:
       fail-fast: false
       matrix:
         python-version:
-          - { name: '3.5', target: 'cp35' }
           - { name: '3.6', target: 'cp36' }
           - { name: '3.7', target: 'cp37' }
           - { name: '3.8', target: 'cp38' }
@@ -112,7 +111,7 @@ jobs:
       - name: Install Python dependencies
         shell: bash
         run: |
-          python -m pip install -U pip setuptools wheel "cibuildwheel @ git+https://github.com/asfaltboy/cibuildwheel@support-quemu-on-github"
+          python -m pip install -U pip setuptools wheel cibuildwheel
 
       - name: Set up Qemu
         id: qemu

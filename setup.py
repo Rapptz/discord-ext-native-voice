@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys
+
 from setuptools import setup
 from setuptools_rust import Binding, RustExtension
 
@@ -30,7 +30,7 @@ setup(
     
     install_requires=install_requires,
     setup_requires=setup_requires,
-    python_requires='>=3.5.3',
+    python_requires='>=3.6',
 
     classifiers=[
         "License :: OSI Approved :: Apache 2.0",
