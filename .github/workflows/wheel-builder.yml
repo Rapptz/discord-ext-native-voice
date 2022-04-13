@@ -20,6 +20,8 @@ jobs:
           - { os: 'windows-latest', python-architecture: 'x64', rust-architecture: 'x86_64', rust-platform: 'pc-windows-msvc', cibw-build: '*-win_amd64' }
           - { os: 'ubuntu-latest', python-architecture: 'x64', rust-architecture: 'i686', rust-platform: 'unknown-linux-gnu', cibw-build: '*-manylinux_i686' }
           - { os: 'ubuntu-latest', python-architecture: 'x64', rust-architecture: 'x86_64', rust-platform: 'unknown-linux-gnu', cibw-build: '*-manylinux_x86_64' }
+          - { os: 'ubuntu-latest', python-architecture: 'x64', rust-architecture: 'i686', rust-platform: 'unknown-linux-musl', cibw-build: '*-musllinux_i686' }
+          - { os: 'ubuntu-latest', python-architecture: 'x64', rust-architecture: 'x86_64', rust-platform: 'unknown-linux-musl', cibw-build: '*-musllinux_x86_64' }
           - { os: 'macos-latest', python-architecture: 'x64', rust-architecture: 'x86_64', rust-platform: 'apple-darwin', cibw-build: '*-macosx_x86_64' }
 
     name: Build wheels for ${{ matrix.target.rust-architecture }} on ${{ matrix.target.os }}
@@ -30,10 +32,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install and set up CPython 3.9
+      - name: Install and set up CPython 3.x
         uses: actions/setup-python@v2
         with:
-          python-version: 3.9
+          python-version: 3.x
           architecture: ${{ matrix.target.python-architecture }}
 
       - name: Install Rust toolchain with support for ${{ matrix.target.rust-architecture }}-${{ matrix.target.rust-platform }}
@@ -61,13 +63,9 @@ jobs:
       - name: Build wheels
         shell: bash
         env:
-          # Images
-          CIBW_MANYLINUX_I686_IMAGE: quay.io/pypa/manylinux2014_i686
-          CIBW_MANYLINUX_X86_64_IMAGE: quay.io/pypa/manylinux2014_x86_64
-
           # Build targeting
           CIBW_BUILD: ${{ matrix.target.cibw-build }}
-          CIBW_SKIP: cp2?-* cp35-* pp*
+          CIBW_SKIP: cp2?-* cp35-* cp36-* cp37-* pp*
 
           # Build process
           CIBW_BEFORE_ALL_LINUX: source ./scripts/before_install.sh
@@ -89,10 +87,10 @@ jobs:
       fail-fast: false
       matrix:
         python-version:
-          - { name: '3.6', target: 'cp36' }
-          - { name: '3.7', target: 'cp37' }
           - { name: '3.8', target: 'cp38' }
           - { name: '3.9', target: 'cp39' }
+          - { name: '3.9', target: 'cp39' }
+          - { name: '3.10', target: 'cp310' }
         architecture: [ aarch64 ]
 
     name: Cross-compile wheels for CPython ${{ matrix.python-version.name }} on ${{ matrix.architecture }}
@@ -103,10 +101,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install and set up CPython 3.9
+      - name: Install and set up CPython 3.x
         uses: actions/setup-python@v2
         with:
-          python-version: 3.9
+          python-version: 3.x
 
       - name: Install Python dependencies
         shell: bash
@@ -122,12 +120,8 @@ jobs:
       - name: Build wheels
         shell: bash
         env:
-          # Images
-          CIBW_MANYLINUX_AARCH64_IMAGE: quay.io/pypa/manylinux2014_aarch64
-          CIBW_MANYLINUX_S390X_IMAGE: quay.io/pypa/manylinux2014_s390x
-
           # Build targeting
-          CIBW_BUILD: ${{ matrix.python-version.target }}-manylinux_${{ matrix.architecture }}
+          CIBW_BUILD: ${{ matrix.python-version.target }}-manylinux_${{ matrix.architecture }} ${{ matrix.python-version.target }}-musllinux_${{ matrix.architecture }}
 
           # Build process
           CIBW_BEFORE_ALL_LINUX: source ./scripts/before_install.sh
