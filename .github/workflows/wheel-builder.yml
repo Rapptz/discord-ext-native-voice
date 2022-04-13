@@ -65,7 +65,6 @@ jobs:
           python -m pip install -U pip wheel setuptools cibuildwheel
 
       - name: Build wheels
-        shell: bash
         env:
           # Build targeting
           CIBW_BUILD: ${{ matrix.target.cibw-build }}
