@@ -16,15 +16,14 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          - { os: 'windows-latest', python-architecture: 'x86', rust-architecture: 'i686', rust-platform: 'pc-windows-msvc', cibw-build: '*-win32' }
-          - { os: 'windows-latest', python-architecture: 'x64', rust-architecture: 'x86_64', rust-platform: 'pc-windows-msvc', cibw-build: '*-win_amd64' }
-          - { os: 'ubuntu-latest', python-architecture: 'x64', rust-architecture: 'i686', rust-platform: 'unknown-linux-gnu', cibw-build: '*-manylinux_i686' }
-          - { os: 'ubuntu-latest', python-architecture: 'x64', rust-architecture: 'x86_64', rust-platform: 'unknown-linux-gnu', cibw-build: '*-manylinux_x86_64' }
-          - { os: 'ubuntu-latest', python-architecture: 'x64', rust-architecture: 'i686', rust-platform: 'unknown-linux-musl', cibw-build: '*-musllinux_i686' }
-          - { os: 'ubuntu-latest', python-architecture: 'x64', rust-architecture: 'x86_64', rust-platform: 'unknown-linux-musl', cibw-build: '*-musllinux_x86_64' }
-          - { os: 'macos-latest', python-architecture: 'x64', rust-architecture: 'x86_64', rust-platform: 'apple-darwin', cibw-build: '*-macosx_x86_64' }
+          - { os: 'windows-latest', python-architecture: 'x86', rust-architecture: 'i686', rust-platform: 'pc-windows-msvc', libc: 'msvc', cibw-build: '*-win32' }
+          - { os: 'windows-latest', python-architecture: 'x64', rust-architecture: 'x86_64', rust-platform: 'pc-windows-msvc', libc: 'msvc', cibw-build: '*-win_amd64' }
+          - { os: 'ubuntu-latest', python-architecture: 'x64', rust-architecture: 'i686', rust-platform: 'unknown-linux-gnu', libc: 'gnu', cibw-build: '*-manylinux_i686' }
+          - { os: 'ubuntu-latest', python-architecture: 'x64', rust-architecture: 'x86_64', rust-platform: 'unknown-linux-gnu', libc: 'gnu', cibw-build: '*-manylinux_x86_64' }
+          - { os: 'ubuntu-latest', python-architecture: 'x64', rust-architecture: 'x86_64', rust-platform: 'unknown-linux-musl', libc: 'musl', cibw-build: '*-musllinux_x86_64' }
+          - { os: 'macos-latest', python-architecture: 'x64', rust-architecture: 'x86_64', rust-platform: 'apple-darwin', libc: 'darwin', cibw-build: '*-macosx_x86_64' }
 
-    name: Build wheels for ${{ matrix.target.rust-architecture }} on ${{ matrix.target.os }}
+    name: Build ${{ matrix.target.rust-architecture }} on ${{ matrix.target.os }}/${{ matrix.target.libc }}
 
     steps:
       - name: Clone repository
