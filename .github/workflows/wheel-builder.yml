@@ -27,7 +27,7 @@ jobs:
 
     steps:
       - name: Clone repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -53,6 +53,11 @@ jobs:
         run: |
           rustup default ${{ matrix.target.rust-toolchain || 'stable' }}-${{ matrix.target.rust-architecture }}-${{ matrix.target.rust-platform }}
           rustup override set ${{ matrix.target.rust-toolchain || 'stable' }}-${{ matrix.target.rust-architecture }}-${{ matrix.target.rust-platform }}
+
+      - name: Install Perl (this is weirdly needed to build OpenSSL)
+        uses: shogo82148/actions-setup-perl@v1
+        with:
+          perl-version: '5.34'
 
       - name: Install Python dependencies
         shell: bash
@@ -96,7 +101,7 @@ jobs:
 
     steps:
       - name: Clone repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
