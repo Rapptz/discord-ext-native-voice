@@ -22,7 +22,7 @@ jobs:
           - { os: 'ubuntu-latest', python-architecture: 'x64', rust-architecture: 'x86_64', rust-platform: 'unknown-linux-gnu', libc: 'gnu', cibw-build: '*-manylinux_x86_64' }
           - { os: 'ubuntu-latest', python-architecture: 'x64', rust-architecture: 'x86_64', rust-platform: 'unknown-linux-musl', libc: 'musl', cibw-build: '*-musllinux_x86_64' }
           - { os: 'macos-latest', python-architecture: 'x64', rust-architecture: 'x86_64', rust-platform: 'apple-darwin', libc: 'darwin', cibw-build: '*-macosx_x86_64' }
-          - { os: 'macos-latest', python-architecture: 'x64', rust-architecture: 'x86_64', rust-platform: 'apple-darwin', libc: 'darwin', cibw-build: '*-macosx_arm64' }
+          - { os: 'macos-latest', python-architecture: 'x64', rust-architecture: 'aarch64', rust-platform: 'apple-darwin', libc: 'darwin', cibw-build: '*-macosx_arm64' }
 
     name: Build ${{ matrix.target.rust-architecture }} on ${{ matrix.target.os }}/${{ matrix.target.libc }}
 
@@ -48,9 +48,9 @@ jobs:
           default: true
           override: true
 
-      - name: Replace directory override with desired target
+      - name: Replace toolchain (rustc, etc) to use with desired target
         shell: bash
-        if: matrix.target.os != 'ubuntu-latest'
+        if: matrix.target.os == 'windows-latest'
         run: |
           rustup default ${{ matrix.target.rust-toolchain || 'stable' }}-${{ matrix.target.rust-architecture }}-${{ matrix.target.rust-platform }}
           rustup override set ${{ matrix.target.rust-toolchain || 'stable' }}-${{ matrix.target.rust-architecture }}-${{ matrix.target.rust-platform }}
