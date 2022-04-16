@@ -68,6 +68,7 @@ jobs:
       - name: Build wheels
         env:
           # Build targeting
+          CIBW_ARCHS_MACOS: x86_64 arm64
           CIBW_BUILD: ${{ matrix.target.cibw-build }}
           CIBW_SKIP: cp2?-* cp35-* cp36-* cp37-* pp*
 
