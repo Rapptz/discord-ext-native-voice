@@ -22,7 +22,7 @@ jobs:
           - { os: 'ubuntu-latest', python-architecture: 'x64', rust-architecture: 'x86_64', rust-platform: 'unknown-linux-gnu', libc: 'gnu', cibw-build: '*-manylinux_x86_64' }
           - { os: 'ubuntu-latest', python-architecture: 'x64', rust-architecture: 'x86_64', rust-platform: 'unknown-linux-musl', libc: 'musl', cibw-build: '*-musllinux_x86_64' }
           - { os: 'macos-latest', python-architecture: 'x64', rust-architecture: 'x86_64', rust-platform: 'apple-darwin', libc: 'darwin', cibw-build: '*-macosx_x86_64' }
-          - { os: 'macos-latest', python-architecture: 'x64', rust-architecture: 'aarch64', rust-platform: 'apple-darwin', libc: 'darwin', cibw-build: '*-macosx_arm64' }
+          - { os: 'macos-latest', python-architecture: 'x64', rust-architecture: 'x86_64', rust-platform: 'apple-darwin', libc: 'darwin', cibw-build: '*-macosx_arm64' }
 
     name: Build ${{ matrix.target.rust-architecture }} on ${{ matrix.target.os }}/${{ matrix.target.libc }}
 
