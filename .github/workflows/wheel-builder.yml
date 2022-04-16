@@ -60,6 +60,12 @@ jobs:
         with:
           perl-version: '5.34'
 
+      - name: Install automake on macOS
+        shell: bash
+        if: matrix.target.os == 'macos-latest'
+        run: |
+          brew install automake
+
       - name: Install Python dependencies
         shell: bash
         run: |
