@@ -19,6 +19,7 @@ crossbeam-channel = { version = "0.4" }
 xsalsa20poly1305 = { version = "0.4", features = ["heapless"] }
 rand = { version = "0.7" }
 audiopus = { version = "0.2" }
+openssl = { version = "^0.10.38", features = ["vendored"] }
 
 [lib]
 name = "_native_voice"

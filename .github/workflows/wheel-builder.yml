@@ -1,0 +1,168 @@
+name: Build wheels
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - '*'
+  workflow_dispatch: {}
+
+
+jobs:
+  build-native-distributions:
+    runs-on: ${{ matrix.target.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - { os: 'windows-latest', python-architecture: 'x86', rust-architecture: 'i686', rust-platform: 'pc-windows-msvc', libc: 'msvc', cibw-build: '*-win32' }
+          - { os: 'windows-latest', python-architecture: 'x64', rust-architecture: 'x86_64', rust-platform: 'pc-windows-msvc', libc: 'msvc', cibw-build: '*-win_amd64' }
+          - { os: 'ubuntu-latest', python-architecture: 'x64', rust-architecture: 'i686', rust-platform: 'unknown-linux-gnu', libc: 'gnu', cibw-build: '*-manylinux_i686' }
+          - { os: 'ubuntu-latest', python-architecture: 'x64', rust-architecture: 'x86_64', rust-platform: 'unknown-linux-gnu', libc: 'gnu', cibw-build: '*-manylinux_x86_64' }
+          - { os: 'ubuntu-latest', python-architecture: 'x64', rust-architecture: 'x86_64', rust-platform: 'unknown-linux-musl', libc: 'musl', cibw-build: '*-musllinux_x86_64' }
+          - { os: 'macos-latest', python-architecture: 'x64', rust-architecture: 'x86_64', rust-platform: 'apple-darwin', libc: 'darwin', cibw-build: '*-macosx_x86_64' }
+          - { os: 'macos-latest', python-architecture: 'x64', rust-architecture: 'aarch64', rust-platform: 'apple-darwin', libc: 'darwin', cibw-build: '*-macosx_arm64' }
+
+    name: Build ${{ matrix.target.rust-architecture }} on ${{ matrix.target.os }}/${{ matrix.target.libc }}
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install and set up CPython 3.x
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.x
+          architecture: ${{ matrix.target.python-architecture }}
+
+      - name: Install Rust toolchain with support for ${{ matrix.target.rust-architecture }}-${{ matrix.target.rust-platform }}
+        uses: actions-rs/toolchain@v1
+        if: matrix.target.os != 'ubuntu-latest'
+        with:
+          profile: minimal
+          target: ${{ matrix.target.rust-architecture }}-${{ matrix.target.rust-platform }}
+          toolchain: ${{ matrix.target.rust-toolchain || 'stable' }}
+          default: true
+          override: true
+
+      - name: Replace toolchain (rustc, etc) to use with desired target
+        shell: bash
+        if: matrix.target.os == 'windows-latest'
+        run: |
+          rustup default ${{ matrix.target.rust-toolchain || 'stable' }}-${{ matrix.target.rust-architecture }}-${{ matrix.target.rust-platform }}
+          rustup override set ${{ matrix.target.rust-toolchain || 'stable' }}-${{ matrix.target.rust-architecture }}-${{ matrix.target.rust-platform }}
+
+      - name: Install Perl (this is weirdly needed to build OpenSSL)
+        uses: shogo82148/actions-setup-perl@v1
+        with:
+          perl-version: '5.34'
+
+      - name: Install automake on macOS
+        shell: bash
+        if: matrix.target.os == 'macos-latest'
+        run: |
+          brew install automake
+
+      - name: Install Python dependencies
+        shell: bash
+        run: |
+          python -m pip install -U pip wheel setuptools cibuildwheel
+
+      - name: Build wheels
+        env:
+          # Build targeting
+          CIBW_ARCHS_MACOS: x86_64 arm64
+          CIBW_BUILD: ${{ matrix.target.cibw-build }}
+          CIBW_SKIP: cp2?-* cp35-* cp36-* cp37-* pp*
+
+          # Build process
+          CIBW_BEFORE_ALL_LINUX: source ./scripts/before_install.sh
+          CIBW_BEFORE_BUILD: python -m pip install -U pip -r requirements-dev.txt
+          CIBW_ENVIRONMENT: 'PATH="$PATH:$HOME/.cargo/bin" LIBOPUS_STATIC=1'
+
+          # Make macOS cross builds work by directing to system python
+          PYO3_CROSS_LIB_DIR: /Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.8/lib
+
+        run: |
+          python -m cibuildwheel --output-dir wheelhouse
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheelhouse
+          path: wheelhouse/
+
+  build-cross-distributions:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - { name: '3.8', target: 'cp38' }
+          - { name: '3.9', target: 'cp39' }
+          - { name: '3.9', target: 'cp39' }
+          - { name: '3.10', target: 'cp310' }
+        architecture: [ aarch64 ]
+
+    name: Cross-compile wheels for CPython ${{ matrix.python-version.name }} on ${{ matrix.architecture }}
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install and set up CPython 3.x
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.x
+
+      - name: Install Python dependencies
+        shell: bash
+        run: |
+          python -m pip install -U pip setuptools wheel cibuildwheel
+
+      - name: Set up Qemu
+        id: qemu
+        uses: docker/setup-qemu-action@v1
+        with:
+          platforms: ${{ matrix.architecture }}
+
+      - name: Build wheels
+        shell: bash
+        env:
+          # Build targeting
+          CIBW_BUILD: ${{ matrix.python-version.target }}-manylinux_${{ matrix.architecture }} ${{ matrix.python-version.target }}-musllinux_${{ matrix.architecture }}
+
+          # Build process
+          CIBW_BEFORE_ALL_LINUX: source ./scripts/before_install.sh
+          CIBW_BEFORE_BUILD: python -m pip install -U pip -r requirements-dev.txt
+          CIBW_ENVIRONMENT: 'PATH="$PATH:$HOME/.cargo/bin" LIBOPUS_STATIC=1'
+
+        run: |
+          python -m cibuildwheel --output-dir wheelhouse --arch ${{ matrix.architecture }}
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheelhouse
+          path: wheelhouse/
+
+  upload_pypi:
+    needs: [ build-native-distributions, build-cross-distributions ]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/')
+
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: wheelhouse
+          path: dist
+
+      - uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: ${{ secrets.pypi_username }}
+          password: ${{ secrets.pypi_password }}
