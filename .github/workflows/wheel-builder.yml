@@ -77,6 +77,9 @@ jobs:
           CIBW_BEFORE_BUILD: python -m pip install -U pip -r requirements-dev.txt
           CIBW_ENVIRONMENT: 'PATH="$PATH:$HOME/.cargo/bin" LIBOPUS_STATIC=1'
 
+          # Make macOS cross builds work by directing to system python
+          PYO3_CROSS_LIB_DIR: /Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.8/lib
+
         run: |
           python -m cibuildwheel --output-dir wheelhouse
 
